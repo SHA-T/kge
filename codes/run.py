@@ -35,7 +35,9 @@ def parse_args(args=None):
 
     parser.add_argument('--cuda', action='store_true', help='use GPU')
 
+    parser.add_argument('--do_pretrain', action='store_true')
     parser.add_argument('--do_train', action='store_true')
+    parser.add_argument('--do_posttrain', action='store_true')
     parser.add_argument('--do_valid', action='store_true')
     parser.add_argument('--do_test', action='store_true')
     parser.add_argument('--evaluate_train', action='store_true', help='Evaluate on training data')
@@ -146,7 +148,6 @@ def set_logger(args):
     '''
     Write logs to checkpoint and console
     '''
-
     if args.do_train:
         log_file = os.path.join(args.save_path or args.init_checkpoint, 'train.log')
     else:
@@ -210,6 +211,12 @@ def main(args):
         for line in fin:
             rid, relation = line.strip().split('\t')
             relation2id[relation] = int(rid)
+    
+    # Create relation2id dictionary containing only relations present in the pretrain set (mock relations)
+    relation2id_mock = None
+    if args.do_pretrain:
+        mock_relations = pd.read_csv(os.path.join(args.data_path, 'pretrain.txt'), sep='\t', header=None)[1].unique()
+        relation2id_mock = {k: relation2id[k] for k in mock_relations}
 
     # Read regions for Countries S* datasets
     if args.countries:
@@ -248,6 +255,16 @@ def main(args):
     logging.info('#entity: %d' % nentity)
     logging.info('#relation: %d' % nrelation)
 
+    if args.do_pretrain:
+        if not os.path.exists(os.path.join(args.data_path, 'pretrain.txt')):
+            raise FileNotFoundError("Pretraining not possible because the data_path does not contain a pretrain.txt")
+        pretrain_triples = read_triple(os.path.join(args.data_path, 'pretrain.txt'), entity2id, relation2id)
+        logging.info('#train: %d' % len(pretrain_triples))
+    if args.do_posttrain:
+        if not os.path.exists(os.path.join(args.data_path, 'posttrain.txt')):
+            raise FileNotFoundError("Posttraining not possible because the data_path does not contain a posttrain.txt")
+        posttrain_triples = read_triple(os.path.join(args.data_path, 'posttrain.txt'), entity2id, relation2id)
+        logging.info('#train: %d' % len(posttrain_triples))
     train_triples = read_triple(os.path.join(args.data_path, 'train.txt'), entity2id, relation2id)
     logging.info('#train: %d' % len(train_triples))
     valid_triples = read_triple(os.path.join(args.data_path, 'valid.txt'), entity2id, relation2id)
@@ -275,6 +292,46 @@ def main(args):
     if args.cuda:
         kge_model = kge_model.cuda()
 
+    if args.do_pretrain:
+        # Set pretraining dataloader iterator with the pretrain-mock-data
+        pretrain_dataloader_head = DataLoader(
+            TrainDataset(pretrain_triples, nentity, nrelation, args.negative_sample_size, 'head-batch'),
+            batch_size=args.batch_size,
+            shuffle=True,
+            num_workers=max(1, args.cpu_num // 2),
+            collate_fn=TrainDataset.collate_fn
+        )
+
+        pretrain_dataloader_tail = DataLoader(
+            TrainDataset(pretrain_triples, nentity, nrelation, args.negative_sample_size, 'tail-batch'),
+            batch_size=args.batch_size,
+            shuffle=True,
+            num_workers=max(1, args.cpu_num // 2),
+            collate_fn=TrainDataset.collate_fn
+        )
+
+        pretrain_iterator = BidirectionalOneShotIterator(pretrain_dataloader_head, pretrain_dataloader_tail)
+
+    if args.do_posttrain:
+        # Set posttraining dataloader iterator with the posttrain-data
+        posttrain_dataloader_head = DataLoader(
+            TrainDataset(posttrain_triples, nentity, nrelation, args.negative_sample_size, 'head-batch'),
+            batch_size=args.batch_size,
+            shuffle=True,
+            num_workers=max(1, args.cpu_num // 2),
+            collate_fn=TrainDataset.collate_fn
+        )
+
+        posttrain_dataloader_tail = DataLoader(
+            TrainDataset(posttrain_triples, nentity, nrelation, args.negative_sample_size, 'tail-batch'),
+            batch_size=args.batch_size,
+            shuffle=True,
+            num_workers=max(1, args.cpu_num // 2),
+            collate_fn=TrainDataset.collate_fn
+        )
+
+        posttrain_iterator = BidirectionalOneShotIterator(posttrain_dataloader_head, posttrain_dataloader_tail)
+    
     if args.do_train:
         # Set training dataloader iterator
         train_dataloader_head = DataLoader(
@@ -335,7 +392,33 @@ def main(args):
 
     # Set valid dataloader as it would be evaluated during training
 
+    if args.do_pretrain:
+        logging.info('____________________')
+        logging.info('Start Pretraining...')
+
+        training_logs = []
+
+        # Pretraining Loop
+        for step in range(init_step, args.max_steps//10):
+            log = kge_model.train_step(kge_model, optimizer, pretrain_iterator, args, pretrain_finished=False)
+
+            training_logs.append(log)
+
+            if step % args.log_steps == 0:
+                metrics = {}
+                for metric in training_logs[0].keys():
+                    metrics[metric] = sum([log[metric] for log in training_logs])/len(training_logs)
+                log_metrics('Training average', step, metrics)
+                training_logs = []
+
+        save_variable_list = {
+            'step': step,
+            'current_learning_rate': current_learning_rate
+        }
+        save_model(kge_model, optimizer, save_variable_list, args)
+    
     if args.do_train:
+        logging.info('____________________')
         logging.info('learning_rate = %d' % current_learning_rate)
 
         training_logs = []
@@ -345,7 +428,8 @@ def main(args):
         step_time_list = []
         #Training Loop
         for step in range(init_step, args.max_steps):
-            log = kge_model.train_step(kge_model, optimizer, train_iterator, args)
+            log = kge_model.train_step(kge_model, optimizer, train_iterator, args,
+                                       pretrain_finished=True, relation2id_mock=relation2id_mock)
 
             training_logs.append(log)
 
@@ -412,6 +496,31 @@ def main(args):
             'step': step,
             'current_learning_rate': current_learning_rate,
             'warm_up_steps': warm_up_steps
+        }
+        save_model(kge_model, optimizer, save_variable_list, args)
+    
+    if args.do_posttrain:
+        logging.info('____________________')
+        logging.info('Start Posttraining...')
+
+        training_logs = []
+
+        # Posttraining Loop
+        for step in range(init_step, args.max_steps//20):
+            log = kge_model.train_step(kge_model, optimizer, posttrain_iterator, args, pretrain_finished=True)
+
+            training_logs.append(log)
+
+            if step % args.log_steps == 0:
+                metrics = {}
+                for metric in training_logs[0].keys():
+                    metrics[metric] = sum([log[metric] for log in training_logs])/len(training_logs)
+                log_metrics('Training average', step, metrics)
+                training_logs = []
+
+        save_variable_list = {
+            'step': step,
+            'current_learning_rate': current_learning_rate
         }
         save_model(kge_model, optimizer, save_variable_list, args)
 
