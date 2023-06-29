@@ -14,7 +14,7 @@ DATASET_ROOT_PATH="data_k_fold/yamanishi/ion_channel"
 DATASET_NAME="with_similarity_information_top0.05pct"
 FOLD="1"
 
-MODEL_KGE="RotatE"
+MODEL_KGE="RotatE"                # TransE | RotatE | ComplEx | DistMult
 
 NEGATIVES=32
 BATCHSIZE=512
@@ -38,6 +38,8 @@ if [ "$MODEL_KGE" = "ComplEx" ]; then
   REG="-r 0.001"
 fi
 
+NEG_SAMPLING_METHOD="jaccard"     # uniform | jaccard | count
+
 WANDB_ENTITY="l3s-future-lab"
 WANDB_PROJECT="test_yamanishi_si"
 
@@ -51,6 +53,7 @@ export WANDB_API_KEY=$wandb_api_key
 
 python -u codes/run.py \
  --wandb_project $WANDB_PROJECT \
+ --neg_sampling_method $NEG_SAMPLING_METHOD \
  --do_train \
  --do_pretrain \
  --cuda \

@@ -420,6 +420,7 @@ def main(args):
     
     if args.do_train:
         logging.info('____________________')
+        logging.info('Start Training...')
         logging.info('learning_rate = %d' % current_learning_rate)
 
         training_logs = []
@@ -526,6 +527,7 @@ def main(args):
         save_model(kge_model, optimizer, save_variable_list, args)
 
     if args.do_valid:
+        logging.info('____________________')
         logging.info('Evaluating on Valid Dataset...')
         metrics = kge_model.test_step(kge_model, valid_triples, all_true_triples, args)
         log_metrics('Valid', step, metrics)
@@ -541,6 +543,7 @@ def main(args):
                           step=step)
 
     if args.do_test:
+        logging.info('____________________')
         logging.info('Evaluating on Test Dataset...')
         metrics = kge_model.test_step(kge_model, test_triples, all_true_triples, args)
         log_metrics('Test', step, metrics)
@@ -556,6 +559,7 @@ def main(args):
                           step=step)
 
     if args.evaluate_train:
+        logging.info('____________________')
         logging.info('Evaluating on Training Dataset...')
         metrics = kge_model.test_step(kge_model, train_triples, all_true_triples, args)
         log_metrics('Test', step, metrics)
