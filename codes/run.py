@@ -11,6 +11,7 @@ import os
 import random
 
 import numpy as np
+import pandas as pd
 import torch
 
 from torch.utils.data import DataLoader
@@ -259,12 +260,12 @@ def main(args):
         if not os.path.exists(os.path.join(args.data_path, 'pretrain.txt')):
             raise FileNotFoundError("Pretraining not possible because the data_path does not contain a pretrain.txt")
         pretrain_triples = read_triple(os.path.join(args.data_path, 'pretrain.txt'), entity2id, relation2id)
-        logging.info('#train: %d' % len(pretrain_triples))
+        logging.info('#pretrain: %d' % len(pretrain_triples))
     if args.do_posttrain:
         if not os.path.exists(os.path.join(args.data_path, 'posttrain.txt')):
             raise FileNotFoundError("Posttraining not possible because the data_path does not contain a posttrain.txt")
         posttrain_triples = read_triple(os.path.join(args.data_path, 'posttrain.txt'), entity2id, relation2id)
-        logging.info('#train: %d' % len(posttrain_triples))
+        logging.info('#posttrain: %d' % len(posttrain_triples))
     train_triples = read_triple(os.path.join(args.data_path, 'train.txt'), entity2id, relation2id)
     logging.info('#train: %d' % len(train_triples))
     valid_triples = read_triple(os.path.join(args.data_path, 'valid.txt'), entity2id, relation2id)
@@ -295,7 +296,7 @@ def main(args):
     if args.do_pretrain:
         # Set pretraining dataloader iterator with the pretrain-mock-data
         pretrain_dataloader_head = DataLoader(
-            TrainDataset(pretrain_triples, nentity, nrelation, args.negative_sample_size, 'head-batch'),
+            TrainDataset(pretrain_triples, nentity, nrelation, args.negative_sample_size, 'head-batch', ego_network_data),
             batch_size=args.batch_size,
             shuffle=True,
             num_workers=max(1, args.cpu_num // 2),
@@ -303,7 +304,7 @@ def main(args):
         )
 
         pretrain_dataloader_tail = DataLoader(
-            TrainDataset(pretrain_triples, nentity, nrelation, args.negative_sample_size, 'tail-batch'),
+            TrainDataset(pretrain_triples, nentity, nrelation, args.negative_sample_size, 'tail-batch', ego_network_data),
             batch_size=args.batch_size,
             shuffle=True,
             num_workers=max(1, args.cpu_num // 2),
@@ -315,7 +316,7 @@ def main(args):
     if args.do_posttrain:
         # Set posttraining dataloader iterator with the posttrain-data
         posttrain_dataloader_head = DataLoader(
-            TrainDataset(posttrain_triples, nentity, nrelation, args.negative_sample_size, 'head-batch'),
+            TrainDataset(posttrain_triples, nentity, nrelation, args.negative_sample_size, 'head-batch', ego_network_data),
             batch_size=args.batch_size,
             shuffle=True,
             num_workers=max(1, args.cpu_num // 2),
@@ -323,7 +324,7 @@ def main(args):
         )
 
         posttrain_dataloader_tail = DataLoader(
-            TrainDataset(posttrain_triples, nentity, nrelation, args.negative_sample_size, 'tail-batch'),
+            TrainDataset(posttrain_triples, nentity, nrelation, args.negative_sample_size, 'tail-batch', ego_network_data),
             batch_size=args.batch_size,
             shuffle=True,
             num_workers=max(1, args.cpu_num // 2),

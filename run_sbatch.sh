@@ -37,12 +37,21 @@ REG=""
 if [ "$MODEL_KGE" = "ComplEx" ]; then
   REG="-r 0.001"
 fi
-# --------------------------------
 
+WANDB_ENTITY="l3s-future-lab"
+WANDB_PROJECT="test_yamanishi_si"
+
+# --------- Load Modules ---------
 source ~/.zshrc
 conda activate kge && "$@"
 
-python -u codes/run.py --do_train \
+# ----- Export Env Variables -----
+source .env
+export WANDB_API_KEY=$wandb_api_key
+
+python -u codes/run.py \
+ --wandb_project $WANDB_PROJECT \
+ --do_train \
  --do_pretrain \
  --cuda \
  --seed 42 \

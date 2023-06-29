@@ -1,4 +1,5 @@
 models/
+wandb/
 
 # emacs backup files
 *~
