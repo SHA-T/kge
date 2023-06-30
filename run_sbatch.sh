@@ -14,27 +14,25 @@ DATASET_ROOT_PATH="data_k_fold/yamanishi/ion_channel"
 DATASET_NAME="with_similarity_information_top0.05pct"
 FOLD="1"
 
-MODEL_KGE="RotatE"                # TransE | RotatE | ComplEx | DistMult
+MODEL_KGE="ComplEx"                # TransE | RotatE | ComplEx | DistMult
 
 NEGATIVES=32
-BATCHSIZE=512
-DIM=20
-GAMMA=3.903
-LR=0.04391
-MAX_STEPS=4000
+BATCHSIZE=256
+DIM=50
+GAMMA=3.575
+LR=0.0199
+MAX_STEPS=2500
 VAL_STEPS=$(expr $MAX_STEPS / 20)
 
-DEDR=""
-if [ "$MODEL_KGE" = "ComplEx" ]; then
-  DEDR="-de -dr"
-fi
-
-if [ "$MODEL_KGE" = "RotatE" ]; then
-  DEDR="-de"
-fi
-
+DE=""
+DR=""
 REG=""
+if [ "$MODEL_KGE" = "RotatE" ]; then
+  DE="-de"
+fi
 if [ "$MODEL_KGE" = "ComplEx" ]; then
+  DE="-de"
+  DR="-dr"
   REG="-r 0.001"
 fi
 
@@ -67,4 +65,4 @@ python -u codes/run.py \
  -n $NEGATIVES -b $BATCHSIZE -d $DIM \
  -g $GAMMA -a 1.0 -adv \
  -lr $LR --max_steps $MAX_STEPS \
- -save models/"${DATASET_NAME}_${MODEL_KGE}" --test_batch_size 8 $DEDR $REG
+ -save models/"${DATASET_NAME}_${MODEL_KGE}" --test_batch_size 8 $DE $DR $REG
