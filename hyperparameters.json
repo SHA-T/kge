@@ -1,0 +1,232 @@
+{
+    "enzyme": {
+        "TransE": {
+            "NEGATIVES": 1024,
+            "BATCHSIZE": 128,
+            "DIM": 50,
+            "GAMMA": 7.27,
+            "LR": 0.002627,
+            "MAX_STEPS": 1000,
+            "DE": "",
+            "DR": "",
+            "REG": ""
+        },
+        "RotatE": {
+            "NEGATIVES": 32,
+            "BATCHSIZE": 512,
+            "DIM": 50,
+            "GAMMA": 3.291,
+            "LR": 0.03764,
+            "MAX_STEPS": 3000,
+            "DE": "-de",
+            "DR": "",
+            "REG": ""
+        },
+        "ComplEx": {
+            "NEGATIVES": 512,
+            "BATCHSIZE": 512,
+            "DIM": 100,
+            "GAMMA": 9.589,
+            "LR": 0.04614,
+            "MAX_STEPS": 3000,
+            "DE": "-de",
+            "DR": "-dr",
+            "REG": "-r 0.001"
+        },
+        "DistMult": {
+            "NEGATIVES": 1024,
+            "BATCHSIZE": 512,
+            "DIM": 100,
+            "GAMMA": 0,
+            "LR": 0.0481,
+            "MAX_STEPS": 3000,
+            "DE": "",
+            "DR": "",
+            "REG": "-r 0.001"
+        }
+    },
+    "ion_channel": {
+        "TransE": {
+            "NEGATIVES": 128,
+            "BATCHSIZE": 1024,
+            "DIM": 100,
+            "GAMMA": 4.429,
+            "LR": 0.01373,
+            "MAX_STEPS": 3000,
+            "DE": "",
+            "DR": "",
+            "REG": ""
+        },
+        "RotatE": {
+            "NEGATIVES": 32,
+            "BATCHSIZE": 512,
+            "DIM": 20,
+            "GAMMA": 3.903,
+            "LR": 0.04391,
+            "MAX_STEPS": 4000,
+            "DE": "-de",
+            "DR": "",
+            "REG": ""
+        },
+        "ComplEx": {
+            "NEGATIVES": 32,
+            "BATCHSIZE": 256,
+            "DIM": 50,
+            "GAMMA": 3.575,
+            "LR": 0.0199,
+            "MAX_STEPS": 2500,
+            "DE": "-de",
+            "DR": "-dr",
+            "REG": "-r 0.001"
+        },
+        "DistMult": {
+            "NEGATIVES": 128,
+            "BATCHSIZE": 1024,
+            "DIM": 50,
+            "GAMMA": 0,
+            "LR": 0.001003,
+            "MAX_STEPS": 500,
+            "DE": "",
+            "DR": "",
+            "REG": "-r 0.001"
+        }
+    },
+    "gpcr": {
+        "TransE": {
+            "NEGATIVES": 1024,
+            "BATCHSIZE": 1024,
+            "DIM": 100,
+            "GAMMA": 6.222,
+            "LR": 0.01713,
+            "MAX_STEPS": 2000,
+            "DE": "",
+            "DR": "",
+            "REG": ""
+        },
+        "RotatE": {
+            "NEGATIVES": 128,
+            "BATCHSIZE": 256,
+            "DIM": 100,
+            "GAMMA": 5.665,
+            "LR": 0.007527,
+            "MAX_STEPS": 3000,
+            "DE": "-de",
+            "DR": "",
+            "REG": ""
+        },
+        "ComplEx": {
+            "NEGATIVES": 1024,
+            "BATCHSIZE": 1024,
+            "DIM": 50,
+            "GAMMA": 0.1974,
+            "LR": 0.04538,
+            "MAX_STEPS": 4500,
+            "DE": "-de",
+            "DR": "-dr",
+            "REG": "-r 0.001"
+        },
+        "DistMult": {
+            "NEGATIVES": 1024,
+            "BATCHSIZE": 256,
+            "DIM": 100,
+            "GAMMA": 0,
+            "LR": 0.04364,
+            "MAX_STEPS": 4500,
+            "DE": "",
+            "DR": "",
+            "REG": "-r 0.001"
+        }
+    },
+    "nuclear_receptor": {
+        "TransE": {
+            "NEGATIVES": 1024,
+            "BATCHSIZE": 128,
+            "DIM": 50,
+            "GAMMA": 6.005,
+            "LR": 0.02924,
+            "MAX_STEPS": 1500,
+            "DE": "",
+            "DR": "",
+            "REG": ""
+        },
+        "RotatE": {
+            "NEGATIVES": 32,
+            "BATCHSIZE": 256,
+            "DIM": 100,
+            "GAMMA": 1.711,
+            "LR": 0.03793,
+            "MAX_STEPS": 500,
+            "DE": "-de",
+            "DR": "",
+            "REG": ""
+        },
+        "ComplEx": {
+            "NEGATIVES": 1024,
+            "BATCHSIZE": 512,
+            "DIM": 100,
+            "GAMMA": 2.693,
+            "LR": 0.04261,
+            "MAX_STEPS": 2500,
+            "DE": "-de",
+            "DR": "-dr",
+            "REG": "-r 0.001"
+        },
+        "DistMult": {
+            "NEGATIVES": 32,
+            "BATCHSIZE": 256,
+            "DIM": 50,
+            "GAMMA": 0,
+            "LR": 0.01187,
+            "MAX_STEPS": 2500,
+            "DE": "",
+            "DR": "",
+            "REG": "-r 0.00001"
+        }
+    },
+    "whole_yamanishi": {
+        "TransE": {
+            "NEGATIVES": 512,
+            "BATCHSIZE": 128,
+            "DIM": 100,
+            "GAMMA": 6.681,
+            "LR": 0.001372,
+            "MAX_STEPS": 1500,
+            "DE": "",
+            "DR": "",
+            "REG": ""
+        },
+        "RotatE": {
+            "NEGATIVES": 32,
+            "BATCHSIZE": 128,
+            "DIM": 50,
+            "GAMMA": 5.766,
+            "LR": 0.008023,
+            "MAX_STEPS": 4500,
+            "DE": "-de",
+            "DR": "",
+            "REG": ""
+        },
+        "ComplEx": {
+            "NEGATIVES": 512,
+            "BATCHSIZE": 512,
+            "DIM": 50,
+            "GAMMA": 1.352,
+            "LR": 0.01252,
+            "MAX_STEPS": 4000,
+            "DE": "-de",
+            "DR": "-dr",
+            "REG": "-r 0.001"
+        },
+        "DistMult": {
+            "NEGATIVES": 512,
+            "BATCHSIZE": 1024,
+            "DIM": 100,
+            "GAMMA": 0,
+            "LR": 0.0005129,
+            "MAX_STEPS": 1500,
+            "DE": "",
+            "DR": "",
+            "REG": "-r 0.0001"
+        }
+    }
+}
