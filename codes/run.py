@@ -85,6 +85,7 @@ def parse_args(args=None):
     parser.add_argument('--metadata_path', default=None, type=str, help='Path to the metainformation used for type/simiarity based sampling')
     parser.add_argument('--wandb_project', type=str, default=None)
     parser.add_argument('--wandb_entity', type=str, default=None)
+    parser.add_argument('--wandb_run_name', type=str, default=None)
 
     return parser.parse_args(args)
 
@@ -566,5 +567,5 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
-    wandb.init(entity=args.wandb_entity, project=args.wandb_project, mode='offline' if args.offline else 'online')
+    wandb.init(name=args.wandb_run_name, entity=args.wandb_entity, project=args.wandb_project, mode='offline' if args.offline else 'online')
     main(args)
