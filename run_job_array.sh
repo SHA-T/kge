@@ -2,7 +2,7 @@
 
 #SBATCH --mail-user=t.shamoyan@stud.uni-hannover.de
 #SBATCH --mail-type=BEGIN,END
-#SBATCH --job-name=ion_channel_with_side_effects
+#SBATCH --job-name=gpcr_with_side_effects
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:1
 #SBATCH --mem-per-gpu=16G
@@ -12,7 +12,7 @@
 
 # ---------- Parameters ----------
 DATASET_ROOT="data_k_fold/yamanishi"
-DATASET_TYPE="ion_channel"
+DATASET_TYPE="gpcr"
 DATASET_NAME="with_side_effects"
 FOLD=$SLURM_ARRAY_TASK_ID
 DATA_PATH="${DATASET_ROOT}/${DATASET_TYPE}/${DATASET_NAME}/${FOLD}"
@@ -32,11 +32,12 @@ DE=$(echo $HP | apptainer exec /nfs/data/env/jq.sif jq ".DE" -r)
 DR=$(echo $HP | apptainer exec /nfs/data/env/jq.sif jq ".DR" -r)
 REG=$(echo $HP | apptainer exec /nfs/data/env/jq.sif jq ".REG" -r)
 
-NEG_SAMPLING_METHOD="uniform"     # uniform | jaccard | count
+NEG_SAMPLING_METHOD="uniform"               # [ uniform ] | jaccard | count
+EVAL_NEG_SAMPLING_METHOD="jaccard"          # [ jaccard ] | uniform | count | type
 
 WANDB_ENTITY="l3s-future-lab"
 WANDB_PROJECT="${DATASET_TYPE}_${DATASET_NAME}"
-WANDB_RUN_NAME="${MODEL_KGE}_fold${FOLD}"
+WANDB_RUN_NAME="${MODEL_KGE}_fold-${FOLD}_eval-${EVAL_NEG_SAMPLING_METHOD}"
 
 # --------- Load Modules ---------
 source ~/.zshrc
@@ -52,6 +53,7 @@ python -u codes/run.py \
  --wandb_entity $WANDB_ENTITY \
  --wandb_run_name $WANDB_RUN_NAME \
  --neg_sampling_method $NEG_SAMPLING_METHOD \
+ --eval_neg_sampling_method $EVAL_NEG_SAMPLING_METHOD \
  --do_train \
  --cuda \
  --seed 42 \
