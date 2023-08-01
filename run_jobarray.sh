@@ -2,22 +2,22 @@
 
 #SBATCH --mail-user=t.shamoyan@stud.uni-hannover.de
 #SBATCH --mail-type=BEGIN,END
-#SBATCH --job-name=gpcr_with_side_effects
+#SBATCH --job-name=nuclear_receptor_with_indications_similarity0.2pct
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:1
 #SBATCH --mem-per-gpu=16G
-#SBATCH --time=02:00:00
+#SBATCH --time=03:00:00
 #SBATCH --output=%x.%j.out.log
 #SBATCH --error=%x.%j.err.log
 
 # ---------- Parameters ----------
 DATASET_ROOT="data_k_fold/yamanishi"
-DATASET_TYPE="gpcr"
-DATASET_NAME="with_side_effects"
+DATASET_TYPE="nuclear_receptor"               # enzyme | ion_channel | gpcr | nuclear_receptor | whole_yamanishi
+DATASET_NAME="with_indications_similarity0.2pct"
 FOLD=$SLURM_ARRAY_TASK_ID
 DATA_PATH="${DATASET_ROOT}/${DATASET_TYPE}/${DATASET_NAME}/${FOLD}"
 
-MODEL_KGE="DistMult"                # TransE | RotatE | ComplEx | DistMult
+MODEL_KGE="DistMult"                  # TransE | RotatE | ComplEx | DistMult
 
 HP=`apptainer exec /nfs/data/env/jq.sif jq ".${DATASET_TYPE}.${MODEL_KGE}" hyperparameters.json`
 
@@ -55,6 +55,7 @@ python -u codes/run.py \
  --neg_sampling_method $NEG_SAMPLING_METHOD \
  --eval_neg_sampling_method $EVAL_NEG_SAMPLING_METHOD \
  --do_train \
+ --do_pretrain \
  --cuda \
  --seed 42 \
  --do_valid \
