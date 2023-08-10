@@ -8,7 +8,6 @@ import argparse
 import json
 import logging
 import os
-import random
 
 import numpy as np
 import pandas as pd
@@ -597,5 +596,5 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
-    wandb.init(name=args.wandb_run_name, entity=args.wandb_entity, project=args.wandb_project, mode='offline' if args.offline else 'online')
+    wandb.init(name=args.wandb_run_name, entity=args.wandb_entity if args.wandb_entity else 'l3s-future-lab', project=args.wandb_project, mode='offline' if args.offline else 'online')
     main(args)
