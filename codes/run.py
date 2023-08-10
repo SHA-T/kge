@@ -41,6 +41,9 @@ def parse_args(args=None):
     parser.add_argument('--do_posttrain', action='store_true')
     parser.add_argument('--do_valid', action='store_true')
     parser.add_argument('--do_test', action='store_true')
+    parser.add_argument('--do_similarity_injection', action='store_true')
+    parser.add_argument('--do_similarity_corruption', action='store_true')
+    parser.add_argument('--similarity_tresh', default=0.1, type=float)
     parser.add_argument('--evaluate_train', action='store_true', help='Evaluate on training data')
 
     parser.add_argument('--countries', action='store_true', help='Use Countries S1/S2/S3 datasets')
@@ -217,7 +220,10 @@ def main(args):
     # Create relation2id dictionary containing only relations present in the pretrain set (mock relations)
     relation2id_mock = None
     if args.do_pretrain:
-        mock_relations = pd.read_csv(os.path.join(args.data_path, 'pretrain.txt'), sep='\t', header=None)[1].unique()
+        pretrain_path = Path(args.data_path).parents[1].joinpath('pretrain.txt')
+        if not os.path.exists(pretrain_path):
+            raise FileNotFoundError(f"Pretraining not possible because the {Path(args.data_path).parents[1]} does not contain a pretrain.txt")
+        mock_relations = pd.read_csv(pretrain_path, sep='\t', header=None)[1].unique()
         relation2id_mock = {k: relation2id[k] for k in mock_relations}
 
     # Read regions for Countries S* datasets
@@ -258,9 +264,7 @@ def main(args):
     logging.info('#relation: %d' % nrelation)
 
     if args.do_pretrain:
-        if not os.path.exists(os.path.join(args.data_path, 'pretrain.txt')):
-            raise FileNotFoundError("Pretraining not possible because the data_path does not contain a pretrain.txt")
-        pretrain_triples = read_triple(os.path.join(args.data_path, 'pretrain.txt'), entity2id, relation2id)
+        pretrain_triples = read_triple(pretrain_path, entity2id, relation2id)
         logging.info('#pretrain: %d' % len(pretrain_triples))
     if args.do_posttrain:
         if not os.path.exists(os.path.join(args.data_path, 'posttrain.txt')):
@@ -335,9 +339,33 @@ def main(args):
         posttrain_iterator = BidirectionalOneShotIterator(posttrain_dataloader_head, posttrain_dataloader_tail)
     
     if args.do_train:
+
+        # Load similarity matrix stored in the grandparent folder
+        simmat_drugs = None
+        simmat_prots = None
+        if args.do_similarity_injection:
+            simmat_drugs_path = Path(args.data_path).parents[1].joinpath('simmat_drugs.txt')
+            simmat_prots_path = Path(args.data_path).parents[1].joinpath('simmat_prots.txt')
+            if simmat_drugs_path.exists():
+                simmat_drugs = pd.read_csv(simmat_drugs_path, delimiter='\t', index_col=0)
+            else:
+                raise FileNotFoundError(f'Drugs Similarity Matrix file not found. Expected here: {simmat_drugs_path}')
+            if simmat_prots_path.exists():
+                simmat_prots = pd.read_csv(simmat_prots_path, delimiter='\t', index_col=0)
+            else:
+                raise FileNotFoundError(f'Protein Similarity Matrix file not found. Expected here: {simmat_prots_path}')
+            
+            # # Extract top_x_percent treshold from parent foldername
+            # parent_basename = os.path.basename(Path(args.data_path).parents[0])
+            # top_x_percent = float(parent_basename[19:-3])
+
+        # Passed to the dataloader, the similarity model will use the matrices to create extra positive similarity triples. 
+        
         # Set training dataloader iterator
         train_dataloader_head = DataLoader(
-            TrainDataset(train_triples, nentity, nrelation, args.negative_sample_size, 'head-batch', ego_network_data),
+            TrainDataset(train_triples, nentity, nrelation, args.negative_sample_size, 'head-batch', ego_network_data, 
+                         do_similarity_injection=args.do_similarity_injection, do_similarity_corruption=args.do_similarity_corruption, top_x_percent=args.similarity_tresh, 
+                         simmat_drugs=simmat_drugs, simmat_prots=simmat_prots, entity2id=entity2id, relation2id=relation2id, seed=args.seed),
             batch_size=args.batch_size,
             shuffle=True,
             num_workers=max(1, args.cpu_num//2),
@@ -345,7 +373,9 @@ def main(args):
         )
 
         train_dataloader_tail = DataLoader(
-            TrainDataset(train_triples, nentity, nrelation, args.negative_sample_size, 'tail-batch', ego_network_data),
+            TrainDataset(train_triples, nentity, nrelation, args.negative_sample_size, 'tail-batch', ego_network_data, 
+                         do_similarity_injection=args.do_similarity_injection, do_similarity_corruption=args.do_similarity_corruption, top_x_percent=args.similarity_tresh, 
+                         simmat_drugs=simmat_drugs, simmat_prots=simmat_prots, entity2id=entity2id, relation2id=relation2id, seed=args.seed),
             batch_size=args.batch_size,
             shuffle=True,
             num_workers=max(1, args.cpu_num//2),

@@ -7,18 +7,25 @@ from __future__ import print_function
 import copy
 
 import numpy as np
+import pandas as pd
 import torch
+import random
 
 from torch.utils.data import Dataset
 
 
 class TrainDataset(Dataset):
-    def __init__(self, triples, nentity, nrelation, negative_sample_size, mode, ego_network_data):
+    def __init__(self, triples, nentity, nrelation, negative_sample_size, mode, ego_network_data, 
+                 do_similarity_injection=False, do_similarity_corruption=True, top_x_percent=0.0, 
+                 simmat_drugs=None, simmat_prots=None, entity2id=None, relation2id=None, seed=42):
         self.len = len(triples)
         self.triples = triples
-        self.triple_set = set(triples)
         self.nentity = nentity
         self.nrelation = nrelation
+        self.entity2id = entity2id
+        self.relation2id = relation2id
+        if entity2id is not None: self.id2entity = {v: k for k, v in entity2id.items()}
+        if entity2id is not None: self.id2relation = {v: k for k, v in relation2id.items()}
         self.negative_sample_size = negative_sample_size
         self.mode = mode
         self.count = self.count_frequency(triples)
@@ -26,6 +33,131 @@ class TrainDataset(Dataset):
         self.ego_network_data = ego_network_data
         if self.ego_network_data is not None:
             self.true_neg_samples_head, self.true_neg_samples_tail = self.get_true_neg_samples(self.triples, self.ego_network_data, self.true_head, self.true_tail)
+        
+        # Build similarity dict and use for corruption and injection if requested
+        if (entity2id is not None) and (relation2id is not None):
+            # 1. Build similarity dict
+            if do_similarity_corruption or do_similarity_injection:
+                # Dictionary of similarities for drugs AND proteins. Structure stated in build_similarity_dict()
+                self.simdict = {}
+                if simmat_drugs is not None: self.build_similarity_dict(simmat_drugs, self.calc_thresh(simmat_drugs, top_x_percent))
+                if simmat_prots is not None: self.build_similarity_dict(simmat_prots, self.calc_thresh(simmat_prots, top_x_percent))
+            # 2. Corruption
+            if do_similarity_corruption:
+                random.seed(seed)
+                self.similarity_head_tail_corruption()
+            # 3. Injection
+            if do_similarity_injection:
+                if self.simdict: self.inject_similarity_triples(self.simdict)
+            self.triple_set = set(triples)
+
+
+    @staticmethod
+    def calc_thresh(simmat: pd.DataFrame, top_x_percent: float):
+        """
+        Calculates and returns similarity threshold for similar entities.
+
+        :param simmat:
+            Similarity score matrix of entities.
+        :param top_x_percent:
+            The top X percent of matrix values that we choose to mark similar entities.
+        :return:
+            A threshold value in the matrix that a given percent of all other values in the matrix are higher than.
+        """
+        if top_x_percent <= 0 or top_x_percent > 100:
+            raise ValueError("Please, provide a number between 0 and 100 for top_x_percent.")
+
+        a = simmat.to_numpy()
+        a[a >= 1] = None    # Remove '1's to avoid cases where we only get values on the main diagonal
+
+        percentile = 100 - top_x_percent
+        thresh = np.nanpercentile(a, percentile)
+        return thresh
+    
+
+    def build_similarity_dict(self, simmat: pd.DataFrame, thresh: float):
+        """
+        Extracts all entity pairs from the matrix, that have a similarity score higher than thresh, in the form of a nested dictionary:
+        {
+            "entity_A": {
+                "similar_entity_1": <score>,
+                "similar_entity_2": <score>
+            },
+            "entity_B": ...
+        }
+
+        :param matrix:
+            Similarity score matrix of entities.
+        :param thresh:
+            Similarity score, above which an entity pair is viewed as similar.
+        """
+        # Iterate through matrix columns
+        for col in simmat.columns:
+            if col in self.entity2id.keys():
+                # Find indexes where values are greater than thresh
+                indexes = simmat.index[simmat[col] > thresh].tolist()
+                # Remove indexes same as column
+                if col in indexes: indexes.remove(col)
+                # Remove indexes not present in entities.dict
+                for index in indexes:
+                    if not index in self.entity2id.keys(): indexes.remove(index)
+                
+                if indexes:
+                    # Create inner-dictionary of indexes and similarity values
+                    index_value_dict = {index: value for index, value in zip(indexes, simmat[col][indexes])}
+                    # Put inner-dicationary into outer-dictionary of columns
+                    self.simdict[col] = index_value_dict
+    
+
+    def inject_similarity_triples(self, simdict: pd.DataFrame):
+        """
+        Injects similarity triples (entity_A, sameAs, entity_B) into self.triples
+        """
+        # List of tuples of similar entities
+        pairs = []
+
+        # Iterate through simdict, extract entities and inject (and append to pairs list for optional reasons)
+        for col, indexes in simdict.items():
+            for index in indexes.keys():
+                pairs.append((col, index))
+                self.triples.append((self.entity2id[col], self.relation2id['sameAs'], self.entity2id[index]))
+        
+        # Convert list of tuples to DataFrame and insert relation
+        df = pd.DataFrame.from_records(pairs, columns=['head', 'tail'])
+        df.insert(loc=1, column='relation', value="sameAs")
+        print("\nDataframe of all similar entity pairs:\n", df)
+        df.to_csv("./TEST_injected_similarity_triples.txt", sep='\t', header=False, index=False)
+
+    
+    def similarity_head_tail_corruption(self):
+        """
+        For each triple (protein_A, interactsWith, drug_A) two positive triples are added - one with a corrupted head 
+        and the other with corrupted tail. During corruption head/tail is replaced by randomly picking one entity 
+        from the similar entities of that head/tail. The distribution, the random pick is based on, is made from the 
+        similarity values between the corrupting and the corrupted entity. Higher similarity values lead to a higher
+        chance for a entity to corrupt the head/tail.
+        """
+        for triple in self.triples:
+            # head (h) and tail (t) to be corrupted
+            corrupted_h = self.id2entity[triple[0]]
+            corrupted_t = self.id2entity[triple[2]]
+
+            # List of similar entities to corrupt h or t respectively
+            corruptors_h = self.simdict[corrupted_h].keys()
+            corruptors_t = self.simdict[corrupted_t].keys()
+
+            # List of similarity values belonging to the corruptors. They will function as weights to choose from distribution.
+            corruptors_h_weights = self.simdict[corrupted_h].values()
+            corruptors_t_weights = self.simdict[corrupted_t].values()
+
+            # Choose the actual corruptor for h and t based on weights distribution
+            corruptor_h = random.choices(corruptors_h, weights=corruptors_h_weights)
+            corruptor_t = random.choices(corruptors_t, weights=corruptors_t_weights)
+
+            # Add new triples to triples list
+            self.triples.append((self.entity2id[corruptor_h], triple[1], triple[2]))
+            self.triples.append((triple[0], triple[1], self.entity2id[corruptor_t]))
+    
 
     @staticmethod
     def get_true_neg_samples(triples, ego_network_data, true_head, true_tail):
