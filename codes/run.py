@@ -42,7 +42,7 @@ def parse_args(args=None):
     parser.add_argument('--do_test', action='store_true')
     parser.add_argument('--do_similarity_injection', action='store_true')
     parser.add_argument('--do_similarity_corruption', action='store_true')
-    parser.add_argument('--similarity_tresh', default=0.1, type=float)
+    parser.add_argument('--similarity_thresh', default=0.1, type=float)
     parser.add_argument('--evaluate_train', action='store_true', help='Evaluate on training data')
 
     parser.add_argument('--countries', action='store_true', help='Use Countries S1/S2/S3 datasets')
@@ -363,7 +363,7 @@ def main(args):
         # Set training dataloader iterator
         train_dataloader_head = DataLoader(
             TrainDataset(train_triples, nentity, nrelation, args.negative_sample_size, 'head-batch', ego_network_data, 
-                         do_similarity_injection=args.do_similarity_injection, do_similarity_corruption=args.do_similarity_corruption, top_x_percent=args.similarity_tresh, 
+                         do_similarity_injection=args.do_similarity_injection, do_similarity_corruption=args.do_similarity_corruption, top_x_percent=args.similarity_thresh, 
                          simmat_drugs=simmat_drugs, simmat_prots=simmat_prots, entity2id=entity2id, relation2id=relation2id, seed=args.seed),
             batch_size=args.batch_size,
             shuffle=True,
@@ -373,7 +373,7 @@ def main(args):
 
         train_dataloader_tail = DataLoader(
             TrainDataset(train_triples, nentity, nrelation, args.negative_sample_size, 'tail-batch', ego_network_data, 
-                         do_similarity_injection=args.do_similarity_injection, do_similarity_corruption=args.do_similarity_corruption, top_x_percent=args.similarity_tresh, 
+                         do_similarity_injection=args.do_similarity_injection, do_similarity_corruption=args.do_similarity_corruption, top_x_percent=args.similarity_thresh, 
                          simmat_drugs=simmat_drugs, simmat_prots=simmat_prots, entity2id=entity2id, relation2id=relation2id, seed=args.seed),
             batch_size=args.batch_size,
             shuffle=True,

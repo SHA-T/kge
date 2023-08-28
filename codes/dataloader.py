@@ -39,17 +39,24 @@ class TrainDataset(Dataset):
             # 1. Build similarity dict
             if do_similarity_corruption or do_similarity_injection:
                 # Dictionary of similarities for drugs AND proteins. Structure stated in build_similarity_dict()
+                print("--- Start Building Similarity Dictionary ---")
                 self.simdict = {}
                 if simmat_drugs is not None: self.build_similarity_dict(simmat_drugs, self.calc_thresh(simmat_drugs, top_x_percent))
                 if simmat_prots is not None: self.build_similarity_dict(simmat_prots, self.calc_thresh(simmat_prots, top_x_percent))
+                print(self.simdict)
+                print("--- End Building Similarity Dictionary ---")
             # 2. Corruption
             if do_similarity_corruption:
+                print("------- Start Similarity Corruption -------")
                 random.seed(seed)
                 self.similarity_head_tail_corruption()
+                print("------- End Similarity Corruption -------")
             # 3. Injection
             if do_similarity_injection:
+                print("------- Start Similarity Injection -------")
                 if self.simdict: self.inject_similarity_triples(self.simdict)
-            self.triple_set = set(triples)
+                print("------- End Similarity Injection -------")
+        self.triple_set = set(triples)
 
 
     @staticmethod
@@ -137,26 +144,31 @@ class TrainDataset(Dataset):
         similarity values between the corrupting and the corrupted entity. Higher similarity values lead to a higher
         chance for a entity to corrupt the head/tail.
         """
-        for triple in self.triples:
+        # List of corrupted triples
+        new_triples = []
+
+        for count, triple in enumerate(self.triples):
+            print("Triple number:", count)
             # head (h) and tail (t) to be corrupted
             corrupted_h = self.id2entity[triple[0]]
             corrupted_t = self.id2entity[triple[2]]
-
-            # List of similar entities to corrupt h or t respectively
-            corruptors_h = self.simdict[corrupted_h].keys()
-            corruptors_t = self.simdict[corrupted_t].keys()
-
-            # List of similarity values belonging to the corruptors. They will function as weights to choose from distribution.
-            corruptors_h_weights = self.simdict[corrupted_h].values()
-            corruptors_t_weights = self.simdict[corrupted_t].values()
-
-            # Choose the actual corruptor for h and t based on weights distribution
-            corruptor_h = random.choices(corruptors_h, weights=corruptors_h_weights)
-            corruptor_t = random.choices(corruptors_t, weights=corruptors_t_weights)
-
-            # Add new triples to triples list
-            self.triples.append((self.entity2id[corruptor_h], triple[1], triple[2]))
-            self.triples.append((triple[0], triple[1], self.entity2id[corruptor_t]))
+            print("corrupted_h:", corrupted_h)
+            print("corrupted_t:", corrupted_t)
+            # head
+            if corrupted_h in self.simdict: 
+                corruptors_h = list(self.simdict[corrupted_h].keys())               # List of similar entities to corrupt the head (h)
+                corruptors_h_weights = list(self.simdict[corrupted_h].values())     # List of similarity values (=weights for distribution) belonging to the potential corruptors
+                corruptor_h = random.choices(corruptors_h, weights=corruptors_h_weights, k=1)[0]    # Choose the actual corruptor based on weights distribution
+                new_triples.append((self.entity2id[corruptor_h], triple[1], triple[2]))             # Add new triple to triples list
+            # tail
+            if corrupted_t in self.simdict:                                         # The same for the tail (t)
+                corruptors_t = list(self.simdict[corrupted_t].keys())
+                corruptors_t_weights = list(self.simdict[corrupted_t].values())
+                corruptor_t = random.choices(corruptors_t, weights=corruptors_t_weights, k=1)[0]
+                new_triples.append((triple[0], triple[1], self.entity2id[corruptor_t]))
+            
+        self.triples.extend(new_triples)
+        print("New triples:\n", new_triples)
     
 
     @staticmethod
