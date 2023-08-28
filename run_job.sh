@@ -4,9 +4,11 @@
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --job-name=train_on_external_valtest_on_yamanishi
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:1
-#SBATCH --mem-per-gpu=16G
+#SBATCH --gres=gpu:a3090
+#SBATCH --mem-per-cpu=8G
+#SBATCH --cpus-per-task=1
 #SBATCH --time=02:00:00
+#SBATCH --exclude=devbox2
 #SBATCH --output=%x.%j.out.log
 #SBATCH --error=%x.%j.err.log
 
@@ -32,11 +34,12 @@ DE=$(echo $HP | apptainer exec /nfs/data/env/jq.sif jq ".DE" -r)
 DR=$(echo $HP | apptainer exec /nfs/data/env/jq.sif jq ".DR" -r)
 REG=$(echo $HP | apptainer exec /nfs/data/env/jq.sif jq ".REG" -r)
 
-NEG_SAMPLING_METHOD="uniform"     # uniform | jaccard | count
+NEG_SAMPLING_METHOD="uniform"               # [ uniform ] | jaccard | count
+EVAL_NEG_SAMPLING_METHOD="jaccard"          # [ jaccard ] | uniform | count | type
 
 WANDB_ENTITY="l3s-future-lab"
 WANDB_PROJECT="train_on_external_valtest_on_yamanishi"
-WANDB_RUN_NAME="${DATASET_TYPE}_${DATASET_NAME}_${MODEL_KGE}"
+WANDB_RUN_NAME="${DATASET_TYPE}_${DATASET_NAME}_${MODEL_KGE}_eval-${EVAL_NEG_SAMPLING_METHOD}"
 
 # --------- Load Modules ---------
 source ~/.zshrc
@@ -52,6 +55,7 @@ python -u codes/run.py \
  --wandb_entity $WANDB_ENTITY \
  --wandb_run_name $WANDB_RUN_NAME \
  --neg_sampling_method $NEG_SAMPLING_METHOD \
+ --eval_neg_sampling_method $EVAL_NEG_SAMPLING_METHOD \
  --do_train \
  --cuda \
  --seed 42 \

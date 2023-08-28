@@ -4,9 +4,11 @@
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --job-name=nuclear_receptor_with_indications_similarity0.2pct
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:1
-#SBATCH --mem-per-gpu=16G
+#SBATCH --gres=gpu:a3090
+#SBATCH --mem-per-cpu=8G
+#SBATCH --cpus-per-task=1
 #SBATCH --time=03:00:00
+#SBATCH --exclude=devbox2
 #SBATCH --output=%x.%j.out.log
 #SBATCH --error=%x.%j.err.log
 

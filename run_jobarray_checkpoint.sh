@@ -2,18 +2,20 @@
 
 #SBATCH --mail-user=t.shamoyan@stud.uni-hannover.de
 #SBATCH --mail-type=BEGIN,END
-#SBATCH --job-name=nuclear_receptor_with_indications
+#SBATCH --job-name=nuclear_receptor_with_similarity_top0.2pct
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:1
-#SBATCH --time=03:00:00
+#SBATCH --mem-per-gpu=8G
+#SBATCH --time=01:00:00
+#SBATCH --exclude=devbox2
 #SBATCH --error=%x.%j.err.log
 
-# Compared with normal run_jobarray.sh script this has no --mem-per-gpu restriction and does not train (no --do_train, but --init_checkpoint/-init). This is for doing different eval modes.
+# Compared with normal run_jobarray.sh script this has less --mem-per-gpu demand and does not train (no --do_train, but --init_checkpoint/-init). This is for doing different eval modes.
 
 # ---------- Parameters ----------
 DATASET_ROOT="data_k_fold/yamanishi"
-DATASET_TYPE="nuclear_receptor"
-DATASET_NAME="with_indications"
+DATASET_TYPE="nuclear_receptor"                 # enzyme | ion_channel | gpcr | nuclear_receptor | whole_yamanishi
+DATASET_NAME="with_similarity_top0.2pct"
 FOLD=$SLURM_ARRAY_TASK_ID
 DATA_PATH="${DATASET_ROOT}/${DATASET_TYPE}/${DATASET_NAME}/${FOLD}"
 
